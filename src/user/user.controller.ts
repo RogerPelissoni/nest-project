@@ -6,48 +6,66 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
+import { ApiTags, ApiBody, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { Prisma } from 'prisma/generated/client';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
+@ApiTags('user')
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  create(@Body() createUserDto: Prisma.UserCreateInput) {
-    return this.userService.create(createUserDto);
+  @ApiBody({ type: CreateUserDto })
+  create(@Body() createUserDto: CreateUserDto) {
+    const prismaData: Prisma.UserCreateInput = { ...createUserDto };
+    return this.userService.create(prismaData);
   }
 
   @Get()
+  @ApiQuery({ name: 'skip', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
+  @ApiQuery({ name: 'orderBy', required: false, type: String })
   findAll(
-    @Body()
-    bodyParams: {
-      skip?: number;
-      take?: number;
-      cursor?: Prisma.UserWhereUniqueInput;
-      where?: Prisma.UserWhereInput;
-      orderBy?: Prisma.UserOrderByWithRelationInput;
-    },
+    @Query('skip') skip?: number,
+    @Query('take') take?: number,
+    @Query('orderBy') orderBy?: string,
   ) {
-    return this.userService.findAll(bodyParams);
+    // Monta o objeto para o Prisma
+    const params: Prisma.UserFindManyArgs = {
+      skip: skip ? Number(skip) : undefined,
+      take: take ? Number(take) : undefined,
+      orderBy: orderBy
+        ? { [orderBy]: 'asc' } // ajuste conforme necessidade
+        : undefined,
+    };
+    return this.userService.findAll(params);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: Prisma.UserWhereUniqueInput) {
-    return this.userService.findOne(id);
+  @ApiParam({ name: 'id', description: 'ID do usuário' })
+  findOne(@Param('id') id: string) {
+    const prismaId: Prisma.UserWhereUniqueInput = { id: Number(id) }; // ← converte para number
+    return this.userService.findOne(prismaId);
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: Prisma.UserWhereUniqueInput,
-    @Body() updateUserDto: Prisma.UserUpdateInput,
-  ) {
-    return this.userService.update(id, updateUserDto);
+  @ApiParam({ name: 'id', description: 'ID do usuário' })
+  @ApiBody({ type: UpdateUserDto })
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    const prismaData: Prisma.UserUpdateInput = { ...updateUserDto };
+    const prismaId: Prisma.UserWhereUniqueInput = { id: Number(id) }; // ← converte para number
+    return this.userService.update(prismaId, prismaData);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: Prisma.UserWhereUniqueInput) {
-    return this.userService.remove(id);
+  @ApiParam({ name: 'id', description: 'ID do usuário' })
+  remove(@Param('id') id: string) {
+    const prismaId: Prisma.UserWhereUniqueInput = { id: Number(id) }; // ← converte para number
+    return this.userService.remove(prismaId);
   }
 }
