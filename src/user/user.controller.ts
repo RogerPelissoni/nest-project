@@ -18,13 +18,12 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    const prismaData: Prisma.UserCreateInput = { ...createUserDto };
-    return this.userService.create(prismaData);
+  create(@Body() dtoUser: CreateUserDto) {
+    return this.userService.create(dtoUser);
   }
 
   @Get()
-  findAll(
+  async findAll(
     @Query('skip') skip?: number,
     @Query('take') take?: number,
     @Query('orderBy') orderBy?: string,
@@ -37,7 +36,8 @@ export class UserController {
         ? { [orderBy]: 'asc' } // ajuste conforme necessidade
         : undefined,
     };
-    return this.userService.findAll(params);
+
+    return await this.userService.findAll(params);
   }
 
   @Get(':id')
