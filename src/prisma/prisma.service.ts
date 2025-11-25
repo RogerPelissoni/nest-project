@@ -1,10 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from 'prisma/generated/client';
-
-// TODO: Isso deve ser retornado da 'sessão' do usuário
-const COMPANY_ID = 1;
-const USER_ID = 1;
+import { RequestContext } from 'src/common/context/request-context';
 
 @Injectable()
 export class PrismaService
@@ -32,6 +29,9 @@ export class PrismaService
               const tpOperation = paramsOperation.operation;
               const dtNow = new Date();
 
+              const requestContext = RequestContext.get();
+              const obCurrentUser = requestContext?.user;
+
               const modelInfo = this._runtimeData?.datamodel?.models?.find(
                 (m) => m.name === paramsOperation.model,
               );
@@ -46,20 +46,23 @@ export class PrismaService
                 if (hasField('company_id')) {
                   paramsOperation.args.where = {
                     ...paramsOperation.args.where,
-                    company_id: COMPANY_ID,
+                    company_id: obCurrentUser?.company_id,
                   };
                 }
-              }
+              } else if (tpOperation === 'create') {
+                const data: any = { ...paramsOperation.args.data };
 
-              if (tpOperation === 'create') {
-                paramsOperation.args.data = {
-                  ...paramsOperation.args.data,
-                  ...(hasField('company_id') && { company_id: COMPANY_ID }),
-                  created_at: dtNow,
-                  updated_at: dtNow,
-                  ...(hasField('created_by') && { created_by: USER_ID }),
-                  ...(hasField('updated_by') && { updated_by: USER_ID }),
-                };
+                if (hasField('company_id') && obCurrentUser?.company_id) {
+                  data.company_id = obCurrentUser.company_id;
+                }
+
+                data.created_at = dtNow;
+                data.updated_at = dtNow;
+
+                if (hasField('created_by')) data.created_by = obCurrentUser?.id;
+                if (hasField('updated_by')) data.updated_by = obCurrentUser?.id;
+
+                paramsOperation.args.data = data;
               } else if (
                 tpOperation === 'update' ||
                 tpOperation === 'updateMany'
@@ -67,7 +70,9 @@ export class PrismaService
                 paramsOperation.args.data = {
                   ...paramsOperation.args.data,
                   updated_at: dtNow,
-                  ...(hasField('updated_by') && { updated_by: USER_ID }),
+                  ...(hasField('updated_by') && {
+                    updated_by: obCurrentUser?.id,
+                  }),
                 };
               }
 

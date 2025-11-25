@@ -12,10 +12,13 @@ import { UserService } from './user.service';
 import { Prisma } from 'prisma/generated/client';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { BaseController } from 'src/base/base.controller';
 
 @Controller('user')
-export class UserController {
-  constructor(private readonly userService: UserService) {}
+export class UserController extends BaseController {
+  constructor(private readonly userService: UserService) {
+    super();
+  }
 
   @Post()
   create(@Body() dtoUser: CreateUserDto) {

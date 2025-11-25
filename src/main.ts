@@ -19,9 +19,22 @@ async function bootstrap() {
     .setDescription('The first project with NestJS')
     .setVersion('1.0')
     .addTag('nest')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        in: 'header',
+      },
+      'jwt', // este nome deve bater com @ApiBearerAuth('jwt')
+    )
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
+  SwaggerModule.setup('api', app, documentFactory, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   BigInt.prototype['toJSON'] = function () {
     return this.toString();
