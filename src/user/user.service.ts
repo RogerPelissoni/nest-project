@@ -15,8 +15,67 @@ export class UserService {
     });
   }
 
-  async findAll(params: Prisma.UserFindManyArgs) {
-    return await this.prisma.user.findMany(params);
+  async findAll(params: {
+    skip?: number;
+    take?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    where?: Prisma.UserWhereInput;
+    filters?: Record<string, { value: any; matchMode?: string }>;
+  }) {
+    const { skip = 0, take = 10, sortBy, sortOrder = 'asc', where, filters } = params;
+
+    // Constrói o objeto where com os filtros
+    const whereConditions: Prisma.UserWhereInput = { ...where };
+
+    if (filters) {
+      Object.keys(filters).forEach((key) => {
+        const filter = filters[key];
+        const { value, matchMode = 'like' } = filter;
+
+        // Processa diferentes tipos de matchMode
+        switch (matchMode) {
+          case 'like':
+            whereConditions[key] = { contains: value };
+            break;
+          case 'equals':
+            whereConditions[key] = value;
+            break;
+          case 'startsWith':
+            whereConditions[key] = { startsWith: value };
+            break;
+          case 'endsWith':
+            whereConditions[key] = { endsWith: value };
+            break;
+          default:
+            whereConditions[key] = { contains: value };
+        }
+      });
+    }
+
+    // Constrói o objeto de ordenação dinamicamente
+    const orderBy: Prisma.UserOrderByWithRelationInput | undefined = sortBy
+      ? { [sortBy]: sortOrder }
+      : undefined;
+
+    // Busca os dados com paginação e ordenação
+    const data = await this.prisma.user.findMany({
+      skip,
+      take,
+      where: whereConditions,
+      orderBy,
+    });
+
+    // Busca o total de registros (sem paginação, respeitando filtros)
+    const total = await this.prisma.user.count({ where: whereConditions });
+
+    return {
+      data,
+      total,
+      skip,
+      take,
+      totalPages: Math.ceil(total / take),
+    };
   }
 
   async create(dtoUser: CreateUserDto) {

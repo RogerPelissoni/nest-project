@@ -17,10 +17,10 @@ import { JwtAuthGuard } from './auth/jwt/jwt.guard';
       provide: APP_INTERCEPTOR,
       useClass: ContextInterceptor,
     },
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: JwtAuthGuard,
+    // },
   ],
 })
 export class AppModule {}

@@ -27,20 +27,30 @@ export class UserController extends BaseController {
 
   @Get()
   async findAll(
-    @Query('skip') skip?: number,
-    @Query('take') take?: number,
-    @Query('orderBy') orderBy?: string,
+    @Query() queryParams: any,
   ) {
-    // Monta o objeto para o Prisma
-    const params: Prisma.UserFindManyArgs = {
-      skip: skip ? Number(skip) : undefined,
-      take: take ? Number(take) : undefined,
-      orderBy: orderBy
-        ? { [orderBy]: 'asc' } // ajuste conforme necessidade
-        : undefined,
-    };
+    const skip = Number(queryParams.skip) || 0;
+    const take = Number(queryParams.take) || 10;
+    const sortBy = queryParams.sortBy;
+    const sortOrder = queryParams.sortOrder || 'asc';
 
-    return await this.userService.findAll(params);
+    // Parseia os filtros do JSON
+    let filters: Record<string, any> = {};
+    if (queryParams.filters) {
+      try {
+        filters = JSON.parse(queryParams.filters);
+      } catch (error) {
+        filters = {};
+      }
+    }
+
+    return this.userService.findAll({
+      skip,
+      take,
+      sortBy,
+      sortOrder,
+      filters,
+    });
   }
 
   @Get(':id')
