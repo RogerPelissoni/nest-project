@@ -22,7 +22,7 @@ export class ResourceService {
 
   /**
    * Busca dados de um resource específico
-   * Se keyValue for true, retorna apenas id e name
+   * Se keyValue for true, retorna [{chave: valor}]
    * Se keyValue for false, retorna todos os campos
    */
   async getResourceData(
@@ -37,7 +37,7 @@ export class ResourceService {
 
     try {
       if (keyValue) {
-        // Retorna apenas id e name
+        // Retorna [{chave: valor}]
         const data = await this.prisma[resource].findMany({
           select: {
             id: true,
@@ -45,7 +45,9 @@ export class ResourceService {
           },
         });
 
-        return data;
+        return data.map((item) => ({
+          [item.id]: item.name,
+        }));
       } else {
         // Retorna todos os campos
         const data = await this.prisma[resource].findMany();

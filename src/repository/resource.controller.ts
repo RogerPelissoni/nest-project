@@ -9,7 +9,7 @@ export class ResourceController {
   /**
    * Busca múltiplos resources em uma única chamada
    * POST /resources/retrieve-multiple
-   * 
+   *
    * keyValue: true (default) = retorna apenas id e name
    * keyValue: false = retorna todos os campos do resource
    */
