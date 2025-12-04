@@ -7,10 +7,15 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ContextInterceptor } from './common/interceptors/context-interceptor';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/jwt/jwt.guard';
-import { RepositoryModule } from './modules/resource/repository.module';
+import { RetrieveModule } from './modules/retrieve/retrieve.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), UserModule, AuthModule, RepositoryModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    UserModule,
+    AuthModule,
+    RetrieveModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,

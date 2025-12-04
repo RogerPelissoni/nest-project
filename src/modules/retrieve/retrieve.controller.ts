@@ -1,10 +1,10 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { RetrieveMultipleDto } from './dto/retrieve-multiple.dto';
-import { ResourceResponse, ResourceService } from './resource.service';
+import { RetrieveMultipleDto } from '../resource/dto/retrieve-multiple.dto';
+import { RetrieveResponse, RetrieveService } from './retrieve.service';
 
-@Controller('resources')
-export class ResourceController {
-  constructor(private resourceService: ResourceService) {}
+@Controller('retrieve')
+export class RetrieveController {
+  constructor(private retrieveService: RetrieveService) {}
 
   /**
    * Busca múltiplos resources em uma única chamada
@@ -16,7 +16,7 @@ export class ResourceController {
   @Post('retrieve-multiple')
   async retrieveMultiple(
     @Body() dto: RetrieveMultipleDto,
-  ): Promise<ResourceResponse> {
-    return this.resourceService.getMultipleResources(dto.resources);
+  ): Promise<RetrieveResponse> {
+    return this.retrieveService.getMultipleResources(dto.resources);
   }
 }
