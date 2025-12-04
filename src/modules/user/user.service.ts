@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma, User } from 'prisma/generated/client';
 import { CoreService } from 'src/core/core.service';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class UserService extends CoreService<
@@ -15,12 +16,8 @@ export class UserService extends CoreService<
     super(prisma, 'user');
   }
 
-  // Aqui você só sobrescreve o que for específico de User
-  // Exemplo:
-  // async create(data: Prisma.UserCreateInput) {
-  //   // exemplo: hash de senha (caso você adicione depois)
-  //   // data.password = await bcrypt.hash(data.password, 10);
-
-  //   return super.create(data);
-  // }
+  async create(data: Prisma.UserCreateInput) {
+    data.password = await argon2.hash(data.password);
+    return super.create(data);
+  }
 }
