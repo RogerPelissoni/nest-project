@@ -1,5 +1,5 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { RetrieveMultipleDto } from '../resource/dto/retrieve-multiple.dto';
+import { RetrieveMultipleDto } from './dto/retrieve-multiple.dto';
 import { RetrieveResponse, RetrieveService } from './retrieve.service';
 
 @Controller('retrieve')
