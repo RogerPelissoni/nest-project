@@ -28,7 +28,7 @@ export class ResourceService {
   async getResourceData(
     resource: string,
     keyValue: boolean = true,
-  ): Promise<any[]> {
+  ): Promise<any> {
     const allowedResources = ['company', 'profile', 'user', 'person'];
 
     if (!allowedResources.includes(resource)) {
@@ -37,7 +37,7 @@ export class ResourceService {
 
     try {
       if (keyValue) {
-        // Retorna [{chave: valor}]
+        // Retorna um objeto no formato { id: name, ... }
         const data = await this.prisma[resource].findMany({
           select: {
             id: true,
@@ -45,9 +45,13 @@ export class ResourceService {
           },
         });
 
-        return data.map((item) => ({
-          [item.id]: item.name,
-        }));
+        const result: Record<string | number, any> = {};
+        for (const item of data) {
+          // Usa o id como chave (converte para string internamente quando necessário)
+          result[item.id] = item.name;
+        }
+
+        return result;
       } else {
         // Retorna todos os campos
         const data = await this.prisma[resource].findMany();
