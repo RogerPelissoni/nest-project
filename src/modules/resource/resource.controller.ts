@@ -1,6 +1,6 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { ResourceService, ResourceResponse } from './resource.service';
 import { RetrieveMultipleDto } from './dto/retrieve-multiple.dto';
+import { ResourceResponse, ResourceService } from './resource.service';
 
 @Controller('resources')
 export class ResourceController {

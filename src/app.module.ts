@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UserModule } from './user/user.module';
+import { UserModule } from './modules/user/user.module';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { ContextInterceptor } from './common/interceptors/context-interceptor';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { JwtAuthGuard } from './auth/jwt/jwt.guard';
-import { RepositoryModule } from './repository/repository.module';
+import { JwtAuthGuard } from './modules/auth/jwt/jwt.guard';
+import { RepositoryModule } from './modules/resource/repository.module';
 
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true }), UserModule, AuthModule, RepositoryModule],
