@@ -73,12 +73,17 @@ export class CoreService<TModel, TWhereUnique, TWhere, TCreate, TUpdate> {
     return await this.model.create({ data });
   }
 
-  async update(where: TWhereUnique, data: TUpdate): Promise<TModel> {
-    return await this.model.update({ where, data });
+  async update(id: number, data: TUpdate) {
+    return await this.model.update({
+      where: { id },
+      data,
+    });
   }
 
-  async remove(where: TWhereUnique): Promise<TModel> {
-    return await this.model.delete({ where });
+  async remove(id: number): Promise<TModel> {
+    return await this.model.delete({
+      where: { id },
+    });
   }
 
   async getKeyValue() {
