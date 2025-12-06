@@ -8,13 +8,16 @@ import { ContextInterceptor } from './common/interceptors/context-interceptor';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/jwt/jwt.guard';
 import { RetrieveModule } from './modules/retrieve/retrieve.module';
+import { CompanyModule } from './modules/company/company.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    UserModule,
     AuthModule,
     RetrieveModule,
+    // App Modules
+    UserModule,
+    CompanyModule,
   ],
   controllers: [AppController],
   providers: [
