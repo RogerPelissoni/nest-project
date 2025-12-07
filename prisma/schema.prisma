@@ -40,8 +40,25 @@ model User {
   createdProfiles Profile[] @relation("ProfileCreatedBy")
   updatedProfiles Profile[] @relation("ProfileUpdatedBy")
 
+  createdProfilePermissions ProfilePermission[] @relation("ProfilePermissionCreatedBy")
+  updatedProfilePermissions ProfilePermission[] @relation("ProfilePermissionUpdatedBy")
+
   createdPersons Person[] @relation("PersonCreatedBy")
   updatedPersons Person[] @relation("PersonUpdatedBy")
+  // 
+
+  profilePermissions ProfilePermission[]
+}
+
+model Resource {
+  id        BigInt @id @default(autoincrement())
+  name      String @db.VarChar(50)
+  signature String @unique @db.VarChar(100)
+
+  // Auditable 
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @default(now())
+  profilePermissions ProfilePermission[]
 }
 
 model Profile {
@@ -63,7 +80,33 @@ model Profile {
   createdBy User? @relation("ProfileCreatedBy", fields: [created_by], references: [id])
   updatedBy User? @relation("ProfileUpdatedBy", fields: [updated_by], references: [id])
 
-  users User[]
+  users              User[]
+  profilePermissions ProfilePermission[]
+}
+
+model ProfilePermission {
+  id               BigInt @id @default(autoincrement())
+  profile_id       BigInt
+  resource_id      BigInt
+  permission_level Int    @default(0)
+
+  // Auditable
+  created_by BigInt?
+  updated_by BigInt?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  // Relations
+  profile  Profile  @relation(fields: [profile_id], references: [id])
+  resource Resource @relation(fields: [resource_id], references: [id])
+
+  // Auditables - Relations
+  createdBy User?   @relation("ProfilePermissionCreatedBy", fields: [created_by], references: [id])
+  updatedBy User?   @relation("ProfilePermissionUpdatedBy", fields: [updated_by], references: [id])
+  user      User?   @relation(fields: [userId], references: [id])
+  userId    BigInt?
+
+  @@map("profile_permission")
 }
 
 model Company {
