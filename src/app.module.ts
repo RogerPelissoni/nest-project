@@ -1,13 +1,15 @@
-import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './modules/auth/auth.module';
 import { ContextInterceptor } from './common/interceptors/context-interceptor';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/jwt/jwt.guard';
+// Core Modules
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './modules/auth/auth.module';
+import { SeederModule } from './database/seeders/seeder.module';
 import { RetrieveModule } from './modules/retrieve/retrieve.module';
-// Modules
+// App Modules
 import { UserModule } from './modules/user/user.module';
 import { CompanyModule } from './modules/company/company.module';
 import { ProfileModule } from './modules/profile/profile.module';
@@ -17,6 +19,7 @@ import { ProfileModule } from './modules/profile/profile.module';
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     RetrieveModule,
+    SeederModule,
     // App Modules
     UserModule,
     CompanyModule,

@@ -22,7 +22,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:format": "prisma format",
     "prisma:reset": "prisma migrate reset",
-    "prisma:migrate-init": "prisma migrate dev --name init"
+    "prisma:migrate-init": "prisma migrate dev --name init",
+    "prisma:seed": "ts-node -r tsconfig-paths/register -r dotenv/config src/database/seeders/main.seeders.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

@@ -45,9 +45,6 @@ model User {
 
   createdPersons Person[] @relation("PersonCreatedBy")
   updatedPersons Person[] @relation("PersonUpdatedBy")
-  // 
-
-  profilePermissions ProfilePermission[]
 }
 
 model Resource {
@@ -101,10 +98,8 @@ model ProfilePermission {
   resource Resource @relation(fields: [resource_id], references: [id])
 
   // Auditables - Relations
-  createdBy User?   @relation("ProfilePermissionCreatedBy", fields: [created_by], references: [id])
-  updatedBy User?   @relation("ProfilePermissionUpdatedBy", fields: [updated_by], references: [id])
-  user      User?   @relation(fields: [userId], references: [id])
-  userId    BigInt?
+  createdBy User? @relation("ProfilePermissionCreatedBy", fields: [created_by], references: [id])
+  updatedBy User? @relation("ProfilePermissionUpdatedBy", fields: [updated_by], references: [id])
 
   @@map("profile_permission")
 }
