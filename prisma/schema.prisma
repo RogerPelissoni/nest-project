@@ -40,8 +40,8 @@ model User {
   createdProfiles Profile[] @relation("ProfileCreatedBy")
   updatedProfiles Profile[] @relation("ProfileUpdatedBy")
 
-  createdProfilePermissions ProfilePermission[] @relation("ProfilePermissionCreatedBy")
-  updatedProfilePermissions ProfilePermission[] @relation("ProfilePermissionUpdatedBy")
+  createdProfilePermission ProfilePermission[] @relation("ProfilePermissionCreatedBy")
+  updatedProfilePermission ProfilePermission[] @relation("ProfilePermissionUpdatedBy")
 
   createdPersons Person[] @relation("PersonCreatedBy")
   updatedPersons Person[] @relation("PersonUpdatedBy")
@@ -53,9 +53,9 @@ model Resource {
   signature String @unique @db.VarChar(100)
 
   // Auditable 
-  created_at         DateTime            @default(now())
-  updated_at         DateTime            @default(now())
-  profilePermissions ProfilePermission[]
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @default(now())
+  profilePermission ProfilePermission[]
 }
 
 model Profile {
@@ -77,8 +77,8 @@ model Profile {
   createdBy User? @relation("ProfileCreatedBy", fields: [created_by], references: [id])
   updatedBy User? @relation("ProfileUpdatedBy", fields: [updated_by], references: [id])
 
-  users              User[]
-  profilePermissions ProfilePermission[]
+  users             User[]
+  profilePermission ProfilePermission[]
 }
 
 model ProfilePermission {
@@ -86,6 +86,7 @@ model ProfilePermission {
   profile_id       BigInt
   resource_id      BigInt
   permission_level Int    @default(0)
+  company_id       BigInt
 
   // Auditable
   created_by BigInt?
@@ -96,6 +97,7 @@ model ProfilePermission {
   // Relations
   profile  Profile  @relation(fields: [profile_id], references: [id])
   resource Resource @relation(fields: [resource_id], references: [id])
+  company  Company  @relation(fields: [company_id], references: [id])
 
   // Auditables - Relations
   createdBy User? @relation("ProfilePermissionCreatedBy", fields: [created_by], references: [id])
@@ -116,8 +118,9 @@ model Company {
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
 
-  users    User[]
-  profiles Profile[]
+  users             User[]
+  profiles          Profile[]
+  profilePermission ProfilePermission[]
 }
 
 enum PersonGender {

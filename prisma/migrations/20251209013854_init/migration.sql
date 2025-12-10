@@ -49,6 +49,7 @@ CREATE TABLE `profile_permission` (
     `profile_id` BIGINT NOT NULL,
     `resource_id` BIGINT NOT NULL,
     `permission_level` INTEGER NOT NULL DEFAULT 0,
+    `company_id` BIGINT NOT NULL,
     `created_by` BIGINT NULL,
     `updated_by` BIGINT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -125,6 +126,9 @@ ALTER TABLE `profile_permission` ADD CONSTRAINT `profile_permission_profile_id_f
 
 -- AddForeignKey
 ALTER TABLE `profile_permission` ADD CONSTRAINT `profile_permission_resource_id_fkey` FOREIGN KEY (`resource_id`) REFERENCES `Resource`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `profile_permission` ADD CONSTRAINT `profile_permission_company_id_fkey` FOREIGN KEY (`company_id`) REFERENCES `Company`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `profile_permission` ADD CONSTRAINT `profile_permission_created_by_fkey` FOREIGN KEY (`created_by`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

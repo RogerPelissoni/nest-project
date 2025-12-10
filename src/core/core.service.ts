@@ -20,10 +20,7 @@ export class CoreService<TModel, TWhereUnique, TWhere, TCreate, TUpdate> {
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
     where?: TWhere;
-    filters?: Record<
-      string,
-      { value: any; matchMode?: 'like' | 'equals' | 'startsWith' | 'endsWith' }
-    >;
+    filters?: Record<string, { value: any; matchMode?: 'like' | 'equals' | 'startsWith' | 'endsWith' }>;
   }) {
     const { skip = 0, take = 10, sortBy, sortOrder, where, filters } = params;
 

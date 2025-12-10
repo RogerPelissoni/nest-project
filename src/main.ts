@@ -14,6 +14,9 @@ async function bootstrap() {
       whitelist: true, // remove campos não definidos no DTO
       // forbidNonWhitelisted: true, // retorna erro se houver campos extras
       transform: true, // transforma payload em instância da classe DTO
+      transformOptions: {
+        enableImplicitConversion: true, // <--- Converte "5" -> 5 sem precisar de @Type
+      },
     }),
   );
 

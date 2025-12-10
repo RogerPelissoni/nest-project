@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class CreateProfileDto {
   @IsString()
@@ -7,8 +8,23 @@ export class CreateProfileDto {
 
   @IsString()
   @IsOptional()
-  ds_description: string;
+  ds_description?: string;
 
-  @IsNotEmpty()
-  company_id: number;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PermissionRequestDto)
+  profilePermission?: PermissionRequestDto[];
+}
+
+export class PermissionRequestDto {
+  @IsOptional()
+  @IsNumber()
+  profile_permission_id?: number;
+
+  @IsNumber()
+  resource_id: number;
+
+  @IsNumber()
+  permission_level: number;
 }

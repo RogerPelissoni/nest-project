@@ -3,8 +3,6 @@ import { ProfileService } from './profile.service';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { CoreController } from 'src/core/core.controller';
-import { Prisma } from 'prisma/generated/client';
-import DTO from 'src/core/utils/dto.util';
 import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('profile')
@@ -15,14 +13,12 @@ export class ProfileController extends CoreController<ProfileService> {
 
   @Post()
   create(@Body() dto: CreateProfileDto) {
-    return this.profileService.create(
-      DTO.normalize<Prisma.ProfileCreateInput>(dto),
-    );
+    return this.profileService.createWithDto(dto);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateProfileDto) {
-    return this.profileService.update(Number(id), dto);
+    return this.profileService.updateWithDto(Number(id), dto);
   }
 
   @Get(':profile_id')
