@@ -4,6 +4,7 @@ export interface RequestContextData {
   user?: {
     id: number;
     company_id: number;
+    profile_id: number;
   };
 }
 

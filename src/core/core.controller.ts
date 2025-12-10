@@ -1,11 +1,13 @@
 import { Get, Delete, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { Permission } from 'src/common/decorators/permission.decorator';
 
 @ApiBearerAuth('jwt')
 export class CoreController<TService> {
   constructor(protected readonly service: TService) {}
 
   @Get()
+  @Permission('read')
   findAll(@Query() query: any) {
     return (this.service as any).findAll({
       ...this.parsePagination(query),
@@ -15,11 +17,13 @@ export class CoreController<TService> {
   }
 
   @Get(':id')
+  @Permission('read')
   findOne(@Param('id') id: string) {
     return (this.service as any).findOne(Number(id));
   }
 
   @Delete(':id')
+  @Permission('delete')
   remove(@Param('id') id: string) {
     return (this.service as any).remove(Number(id));
   }
