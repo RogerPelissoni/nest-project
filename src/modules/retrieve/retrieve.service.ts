@@ -20,10 +20,7 @@ export interface RetrieveResponse {
 export class RetrieveService {
   constructor(private prisma: PrismaService) {}
 
-  async getResourceData(
-    resource: string,
-    keyValue: boolean = true,
-  ): Promise<any> {
+  async getResourceData(resource: string, keyValue: boolean = true): Promise<any> {
     const allowedResources = ['company', 'profile', 'user', 'person'];
 
     if (!allowedResources.includes(resource)) {
@@ -53,15 +50,11 @@ export class RetrieveService {
         return data;
       }
     } catch (error) {
-      throw new BadRequestException(
-        `Error fetching ${resource}: ${error.message}`,
-      );
+      throw new BadRequestException(`Error fetching ${resource}: ${error.message}`);
     }
   }
 
-  async getMultipleResources(
-    requests: RetrieveRequest[],
-  ): Promise<RetrieveResponse> {
+  async getMultipleResources(requests: RetrieveRequest[]): Promise<RetrieveResponse> {
     const response: RetrieveResponse = {};
 
     for (const request of requests) {

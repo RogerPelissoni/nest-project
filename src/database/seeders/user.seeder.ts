@@ -14,8 +14,8 @@ export class UserSeeder {
         email: 'admin@admin.com',
         email_verified_at: new Date(),
         password: '123456',
-        profile_id: 1,
-        company_id: null,
+        profile_id: null,
+        company_id: 1,
         person_id: null,
       }),
     );

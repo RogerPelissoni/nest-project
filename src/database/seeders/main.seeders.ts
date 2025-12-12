@@ -5,6 +5,8 @@ import { ResourceService } from 'src/core/resource/resource.service';
 import { CompanySeeder } from './company.seeder';
 import { ProfileSeeder } from './profile.seeder';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { RequestContext, RequestContextData } from 'src/common/context/request-context';
+import { AuditContext } from 'src/common/context/audit.context';
 
 async function bootstrap() {
   const appContext = await NestFactory.createApplicationContext(SeederModule);
@@ -15,17 +17,37 @@ async function bootstrap() {
     const prisma = appContext.get(PrismaService);
     await resetDatabase(prisma);
 
+    // Instâncias dos seeders
     const companySeeder = appContext.get(CompanySeeder);
-    await companySeeder.run();
-
     const profileSeeder = appContext.get(ProfileSeeder);
-    await profileSeeder.run();
-
     const userSeeder = appContext.get(UserSeeder);
-    await userSeeder.run();
+    const resourceService = appContext.get(ResourceService);
 
-    const resourceSeeder = appContext.get(ResourceService);
-    await resourceSeeder.sync();
+    const defaultContext: RequestContextData = {
+      user: {
+        id: 1,
+        company_id: 1,
+        profile_id: 1,
+      },
+    };
+
+    await RequestContext.run(defaultContext, async () => {
+      await companySeeder.run();
+      await resourceService.sync();
+
+      await AuditContext.run({ auditEnabled: false }, async () => {
+        await userSeeder.run();
+      });
+
+      await AuditContext.run({ auditEnabled: true }, async () => {
+        await profileSeeder.run();
+
+        await prisma.user.update({
+          where: { id: 1 },
+          data: { profile_id: 1, created_by: 1, updated_by: 1 },
+        });
+      });
+    });
 
     console.log('Seeders executed successfully.');
   } catch (err) {
@@ -56,6 +78,7 @@ async function resetDatabase(prisma: PrismaService) {
       console.log(`Clearing table: ${tableName}`);
 
       await tx.$executeRawUnsafe(`DELETE FROM \`${tableName}\``);
+      await tx.$executeRawUnsafe(`ALTER TABLE \`${tableName}\` AUTO_INCREMENT = 1`);
     }
 
     await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1');

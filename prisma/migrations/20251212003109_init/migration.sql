@@ -5,9 +5,9 @@ CREATE TABLE `User` (
     `email` VARCHAR(191) NOT NULL,
     `email_verified_at` DATETIME(3) NULL,
     `password` VARCHAR(191) NOT NULL,
-    `profile_id` BIGINT NOT NULL DEFAULT 1,
-    `company_id` BIGINT NULL,
+    `profile_id` BIGINT NULL,
     `person_id` BIGINT NULL,
+    `company_id` BIGINT NULL,
     `created_by` BIGINT NULL,
     `updated_by` BIGINT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -89,6 +89,7 @@ CREATE TABLE `Person` (
     `ds_address_state` VARCHAR(2) NULL,
     `ds_address_zipcode` VARCHAR(10) NULL,
     `fl_active` BOOLEAN NOT NULL DEFAULT true,
+    `company_id` BIGINT NOT NULL,
     `created_by` BIGINT NULL,
     `updated_by` BIGINT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -98,7 +99,7 @@ CREATE TABLE `Person` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `User` ADD CONSTRAINT `User_profile_id_fkey` FOREIGN KEY (`profile_id`) REFERENCES `Profile`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `User` ADD CONSTRAINT `User_profile_id_fkey` FOREIGN KEY (`profile_id`) REFERENCES `Profile`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `User` ADD CONSTRAINT `User_company_id_fkey` FOREIGN KEY (`company_id`) REFERENCES `Company`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -135,6 +136,9 @@ ALTER TABLE `profile_permission` ADD CONSTRAINT `profile_permission_created_by_f
 
 -- AddForeignKey
 ALTER TABLE `profile_permission` ADD CONSTRAINT `profile_permission_updated_by_fkey` FOREIGN KEY (`updated_by`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Person` ADD CONSTRAINT `Person_company_id_fkey` FOREIGN KEY (`company_id`) REFERENCES `Company`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Person` ADD CONSTRAINT `Person_created_by_fkey` FOREIGN KEY (`created_by`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

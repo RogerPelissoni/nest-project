@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from 'prisma/generated/client';
+import { AuditContext } from 'src/common/context/audit.context';
 import { RequestContext } from 'src/common/context/request-context';
 
 @Injectable()
@@ -32,7 +33,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
               const currentModel = paramsOperation.model;
               const modelsWithoutCompany = ['Company', 'Resource'];
 
-              const insertAuditableFields = !modelsWithoutCompany.includes(currentModel);
+              const auditEnabled = AuditContext.get();
+              const insertAuditableFields = !modelsWithoutCompany.includes(currentModel) && auditEnabled;
 
               if (tpOperation === 'findMany' || tpOperation === 'findFirst' || tpOperation === 'findUnique') {
                 if (insertAuditableFields) {

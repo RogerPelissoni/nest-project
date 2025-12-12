@@ -11,8 +11,10 @@ export interface RequestContextData {
 export class RequestContext {
   private static storage = new AsyncLocalStorage<RequestContextData>();
 
-  static run(data: RequestContextData, callback: () => void) {
-    return this.storage.run(data, callback);
+  static run(data: RequestContextData, callback: () => Promise<any>) {
+    return this.storage.run(data, async () => {
+      return await callback();
+    });
   }
 
   static get(): RequestContextData | undefined {
