@@ -1,6 +1,7 @@
 import { Get, Delete, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Permission } from 'src/common/decorators/permission.decorator';
+import { QueryParamsType } from './types/generic.type';
 
 @ApiBearerAuth('jwt')
 export class CoreController<TService> {
@@ -48,5 +49,13 @@ export class CoreController<TService> {
     } catch {
       return {};
     }
+  }
+
+  protected parseQuery<TWhereInput>(queryParams: QueryParamsType<TWhereInput>) {
+    return {
+      ...this.parsePagination(queryParams),
+      ...this.parseSorting(queryParams),
+      filters: this.parseFilters(queryParams),
+    };
   }
 }

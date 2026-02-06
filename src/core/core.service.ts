@@ -1,4 +1,5 @@
 import { PrismaService } from 'src/prisma/prisma.service';
+import { QueryParamsType } from './types/generic.type';
 
 export class CoreService<TModel, TWhereUnique, TWhere, TCreate, TUpdate> {
   constructor(
@@ -14,14 +15,7 @@ export class CoreService<TModel, TWhereUnique, TWhere, TCreate, TUpdate> {
     return this.model.findUnique({ where });
   }
 
-  async findAll(params: {
-    skip?: number;
-    take?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-    where?: TWhere;
-    filters?: Record<string, { value: any; matchMode?: 'like' | 'equals' | 'startsWith' | 'endsWith' }>;
-  }) {
+  async findAll(params: QueryParamsType<TWhere>) {
     const { skip = 0, take = 10, sortBy, sortOrder, where, filters } = params;
 
     const whereConditions: any = { ...where };
@@ -84,11 +78,13 @@ export class CoreService<TModel, TWhereUnique, TWhere, TCreate, TUpdate> {
   }
 
   async getKeyValue() {
-    return await this.model.findMany({
+    const obModel = await this.model.findMany({
       select: {
         id: true,
         name: true,
       },
     });
+
+    return Object.fromEntries(obModel.map((row) => [row.id, row.name]));
   }
 }
