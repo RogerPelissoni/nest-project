@@ -45,6 +45,8 @@ model User {
 
   createdPersons Person[] @relation("PersonCreatedBy")
   updatedPersons Person[] @relation("PersonUpdatedBy")
+
+  @@map("user")
 }
 
 model Resource {
@@ -56,6 +58,8 @@ model Resource {
   created_at        DateTime            @default(now())
   updated_at        DateTime            @default(now())
   profilePermission ProfilePermission[]
+
+  @@map("resource")
 }
 
 model Profile {
@@ -79,6 +83,8 @@ model Profile {
 
   users             User[]
   profilePermission ProfilePermission[]
+
+  @@map("profile")
 }
 
 model ProfilePermission {
@@ -122,6 +128,8 @@ model Company {
   profiles          Profile[]
   profilePermission ProfilePermission[]
   person            Person[]
+
+  @@map("company")
 }
 
 enum PersonGender {
@@ -159,4 +167,6 @@ model Person {
   updatedBy User?   @relation("PersonUpdatedBy", fields: [updated_by], references: [id])
 
   users User[]
+
+  @@map("person")
 }
