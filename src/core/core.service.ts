@@ -85,6 +85,8 @@ export class CoreService<TModel, TWhereUnique, TWhere, TCreate, TUpdate> {
       },
     });
 
-    return Object.fromEntries(obModel.map((row) => [row.id, row.name]));
+    return Object.fromEntries(
+      (obModel as Array<{ id: number | bigint; name: string }>).map((row) => [row.id, row.name]),
+    );
   }
 }

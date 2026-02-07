@@ -1,11 +1,13 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSIONS_KEY } from '../decorators/permission.decorator';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PERMISSIONS_KEY } from '../decorators/permission.decorator';
 import { RESOURCE_KEY } from '../decorators/resource.decorator';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
+  private readonly logger = new Logger(PermissionGuard.name);
+
   constructor(
     private reflector: Reflector,
     private prisma: PrismaService,
@@ -41,6 +43,9 @@ export class PermissionGuard implements CanActivate {
     const neededLevel = { read: 1, create: 2, update: 3, delete: 4 }[permissionType] ?? 0;
 
     if (permissionLevel < neededLevel) {
+      this.logger.warn(
+        `Access denied: User ${user.id} lacks '${permissionType}' permission for resource '${resourceSignature}'`,
+      );
       throw new ForbiddenException(
         `Acesso negado: perfil não possui permissão '${permissionType}' para o recurso '${resourceSignature}'`,
       );

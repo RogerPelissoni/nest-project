@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -6,6 +6,8 @@ import { AuthLoginDto } from './dto/auth-login.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
@@ -16,12 +18,19 @@ export class AuthService {
       where: { email: dto.email },
     });
 
-    if (!user) throw new UnauthorizedException('Credenciais inválidas');
+    if (!user) {
+      this.logger.warn(`Failed login attempt for email: ${dto.email}`);
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
 
     const valid = await argon2.verify(user.password, dto.password);
 
-    if (!valid) throw new UnauthorizedException('Credenciais inválidas');
+    if (!valid) {
+      this.logger.warn(`Invalid password attempt for user ID: ${user.id}`);
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
 
+    this.logger.log(`Successful login for user ID: ${user.id}`);
     return this.createToken(user);
   }
 

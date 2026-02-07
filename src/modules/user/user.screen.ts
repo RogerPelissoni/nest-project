@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { CoreScreen } from 'src/core/core.screen';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { ProfileService } from '../profile/profile.service';
-import { CompanyService } from '../company/company.service';
-import { UserService } from './user.service';
-import { QueryParamsType } from 'src/core/types/generic.type';
 import { Prisma } from 'prisma/generated/client';
+import { CoreScreen } from 'src/core/core.screen';
+import { QueryParamsType } from 'src/core/types/generic.type';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { CompanyService } from '../company/company.service';
+import { ProfileService } from '../profile/profile.service';
+import { UserService } from './user.service';
 
 @Injectable()
 export class UserScreen extends CoreScreen {
@@ -19,10 +19,17 @@ export class UserScreen extends CoreScreen {
   }
 
   async handle(queryParams: QueryParamsType<Prisma.UserWhereInput>) {
+    // Paraleliza as queries para melhor performance
+    const [obUser, kvProfile, kvCompany] = await Promise.all([
+      this.userService.findAll(queryParams),
+      this.profileService.getKeyValue(),
+      this.companyService.getKeyValue(),
+    ]);
+
     return {
-      obUser: await this.userService.findAll(queryParams),
-      kvProfile: await this.profileService.getKeyValue(),
-      kvCompany: await this.companyService.getKeyValue(),
+      obUser,
+      kvProfile,
+      kvCompany,
       kvPerson: [], // TODO: Needs to implements Person model
     };
   }

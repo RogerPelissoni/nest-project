@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 export interface KeyValueResult {
@@ -30,7 +30,7 @@ export class RetrieveService {
     try {
       if (keyValue) {
         // Retorna um objeto no formato { id: name, ... }
-        const data = await this.prisma[resource].findMany({
+        const data = await (this.prisma as any)[resource].findMany({
           select: {
             id: true,
             name: true,
@@ -46,7 +46,7 @@ export class RetrieveService {
         return result;
       } else {
         // Retorna todos os campos
-        const data = await this.prisma[resource].findMany();
+        const data = await (this.prisma as any)[resource].findMany();
         return data;
       }
     } catch (error) {
