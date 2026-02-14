@@ -12,6 +12,7 @@ import { HealthController } from './health/health.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt/jwt.guard';
 import { CompanyModule } from './modules/company/company.module';
+import { PersonModule } from './modules/person/person.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { RetrieveModule } from './modules/retrieve/retrieve.module';
 import { UserModule } from './modules/user/user.module';
@@ -30,6 +31,7 @@ import { PrismaService } from './prisma/prisma.service';
     UserModule,
     CompanyModule,
     ProfileModule,
+    PersonModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

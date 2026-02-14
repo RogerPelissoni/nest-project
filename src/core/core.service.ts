@@ -1,10 +1,14 @@
 import { PrismaService } from 'src/prisma/prisma.service';
+import { CoreQuery, CoreQueryParams } from './support/core-query.support';
 import { QueryParamsType } from './types/generic.type';
+
+type CoreQueryConstructor<TModel> = new (prisma: PrismaService, params: CoreQueryParams) => CoreQuery<TModel>;
 
 export class CoreService<TModel, TWhereUnique, TWhere, TCreate, TUpdate> {
   constructor(
     protected readonly prisma: PrismaService,
     protected readonly modelKey: keyof PrismaService, // ex: 'user'
+    protected readonly queryClass?: CoreQueryConstructor<TModel>,
   ) {}
 
   protected get model() {
@@ -16,6 +20,11 @@ export class CoreService<TModel, TWhereUnique, TWhere, TCreate, TUpdate> {
   }
 
   async findAll(params: QueryParamsType<TWhere>) {
+    if (this.queryClass) {
+      const query = new this.queryClass(this.prisma, params as CoreQueryParams);
+      return query.get();
+    }
+
     const { skip = 0, take = 10, sortBy, sortOrder, where, filters } = params;
 
     const whereConditions: any = { ...where };

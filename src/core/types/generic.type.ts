@@ -4,5 +4,13 @@ export type QueryParamsType<TWhere> = {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   where?: TWhere;
-  filters?: Record<string, { value: any; matchMode?: 'like' | 'equals' | 'startsWith' | 'endsWith' }>;
+  appends?: string[] | string;
+  hydrators?: string[] | string;
+  filters?: Record<
+    string,
+    {
+      value: any;
+      matchMode?: 'like' | 'equals' | 'startsWith' | 'endsWith' | 'eq' | 'in' | 'isNull';
+    }
+  >;
 };
