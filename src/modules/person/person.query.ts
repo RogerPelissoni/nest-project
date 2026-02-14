@@ -54,8 +54,6 @@ export class PersonQuery extends CoreQuery<Person> {
   }
 
   private joinCompany() {
-    if (!this.requestedAppends.has(PersonQuery.APPEND_DS_COMPANY)) return;
-
     this.addInclude({
       company: {
         select: {

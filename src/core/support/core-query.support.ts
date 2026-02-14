@@ -41,6 +41,7 @@ export abstract class CoreQuery<T> {
   protected readonly params: CoreQueryParams;
 
   protected readonly requestedAppends = new Set<string>();
+  protected readonly resolvedAppendFields = new Set<string>();
   protected readonly appendMappers = new Map<string, (items: T[]) => void | Promise<void>>();
   protected readonly hydrators = new Map<string, (items: T[]) => void | Promise<void>>();
   protected readonly activeHydrators = new Set<string>();
@@ -121,7 +122,10 @@ export abstract class CoreQuery<T> {
       fields.add(sortBy);
     }
 
+    this.resolvedAppendFields.clear();
+
     for (const field of fields) {
+      this.resolvedAppendFields.add(field);
       appendHandlers[field]?.();
     }
   }
@@ -567,7 +571,7 @@ export abstract class CoreQuery<T> {
   private async applyAppendMappers(items: T[]) {
     if (!items.length) return;
 
-    for (const append of this.requestedAppends) {
+    for (const append of this.resolvedAppendFields) {
       const mapper = this.appendMappers.get(append);
       if (mapper) {
         await mapper(items);
