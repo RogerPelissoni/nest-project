@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'prisma/generated/client';
 import { CoreScreen } from 'src/core/core.screen';
-import { QueryParamsType } from 'src/core/types/generic.type';
+import { QueryParamsType } from 'src/core/types/query.type';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CompanyService } from '../company/company.service';
 import { ProfileService } from '../profile/profile.service';

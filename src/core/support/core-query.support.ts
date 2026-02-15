@@ -1,619 +1,269 @@
 import { PrismaService } from 'src/prisma/prisma.service';
-import { QueryParamsType } from '../types/generic.type';
+import {
+  CoreQueryAppendHandler,
+  CoreQueryFilterHandler,
+  CoreQueryHydratorHandler,
+  CoreQuerySortHandler,
+} from '../types/core-query.type';
+import { QueryParamsType } from '../types/query.type';
+import { normalizeQueryFilters, normalizeQueryOrderBy } from './query.support';
 
-type SortDirection = 'asc' | 'desc';
-type MatchMode = 'like' | 'equals' | 'startsWith' | 'endsWith' | 'eq' | 'in' | 'isNull';
-type FilterRecordValue =
-  | { value: unknown; matchMode?: MatchMode }
-  | string
-  | number
-  | boolean
-  | bigint
-  | null
-  | undefined;
-type FilterRecord = Record<string, FilterRecordValue>;
+export abstract class CoreQuery<
+  TDelegate,
+  TSelect,
+  TWhere,
+  TOrderBy,
+  TInclude,
+  TAppend extends string = string,
+  THydrator extends string = string,
+> {
+  protected select: Partial<TSelect> = {};
+  protected where: TWhere = {} as TWhere;
+  protected orderBy?: TOrderBy;
+  protected include?: Partial<TInclude>;
 
-export type CoreQueryParams = Omit<QueryParamsType<any>, 'filters'> & {
-  filters?: FilterRecord;
-  appends?: string[] | string;
-};
+  protected runtimeAppends: Set<string> = new Set();
+  protected runtimeHydrators = new Set<string>();
 
-export type CoreQueryFilter = {
-  field: string;
-  value: unknown;
-  matchMode: MatchMode;
-};
+  protected constructor(
+    protected readonly prisma: PrismaService,
+    protected readonly params: QueryParamsType<TWhere>,
+    protected readonly model: TDelegate,
+  ) {}
 
-export type CoreQueryListResult<T> = {
-  data: T[];
-  total: number;
-  skip: number;
-  take: number;
-  totalPages: number;
-};
+  // ===== BASE =====
 
-export abstract class CoreQuery<T> {
-  private static readonly JOIN_NONE = 0;
-  private static readonly JOIN_REQUESTED = 1;
-  private static readonly JOIN_APPLIED = 2;
-
-  protected readonly prisma: PrismaService;
-  protected readonly params: CoreQueryParams;
-
-  protected readonly requestedAppends = new Set<string>();
-  protected readonly resolvedAppendFields = new Set<string>();
-  protected readonly appendMappers = new Map<string, (items: T[]) => void | Promise<void>>();
-  protected readonly hydrators = new Map<string, (items: T[]) => void | Promise<void>>();
-  protected readonly activeHydrators = new Set<string>();
-  protected readonly requestedIncludes: Record<string, unknown> = {};
-  protected readonly joinRegistry = new Map<
-    string,
-    {
-      state: number;
-      callback: () => void;
-    }
-  >();
-  protected defaultSort?: {
-    field: string;
-    direction: SortDirection;
-  };
-  protected readonly beforeExecuteCallbacks: Array<(args: Record<string, unknown>) => void | Promise<void>> = [];
-
-  constructor(prisma: PrismaService, params: CoreQueryParams) {
-    this.prisma = prisma;
-    this.params = params;
-
-    this.parseAppends(params.appends).forEach((append) => this.requestedAppends.add(append));
-    this.parseHydrators(params.hydrators).forEach((hydrator) => this.activeHydrators.add(hydrator));
-  }
-
-  protected abstract model(): {
-    findMany: (args: any) => Promise<T[]>;
-    count: (args: { where: any }) => Promise<number>;
-  };
-  protected abstract baseWhere(): Record<string, unknown>;
-
-  protected baseSelect(): Record<string, unknown> | undefined {
+  protected baseSelect(): TSelect | undefined {
     return undefined;
   }
 
-  protected baseInclude(): Record<string, unknown> | undefined {
+  protected abstract baseWhere(): TWhere;
+
+  protected baseOrderBy(): TOrderBy | undefined {
     return undefined;
   }
 
-  protected appendMap(): Record<string, () => void> {
+  protected appendMap(): Record<string, CoreQueryAppendHandler<TSelect>> {
     return {};
   }
 
-  protected filterMap(): Record<string, (where: Record<string, unknown>, filter: CoreQueryFilter) => void> {
+  protected filterMap(): Record<string, CoreQueryFilterHandler<TWhere>> {
     return {};
   }
 
-  protected sortMap(): Record<string, (orderBy: Record<string, unknown>, direction: SortDirection) => void> {
+  protected sortMap(): Record<string, CoreQuerySortHandler<TOrderBy>> {
     return {};
   }
 
-  withAppends(fields: string[]): this {
-    fields.forEach((field) => this.requestedAppends.add(field));
+  protected hydratorMap(): Record<string, CoreQueryHydratorHandler> {
+    return {};
+  }
+
+  // ===== FLUENT API =====
+
+  withAppends(appends: TAppend | TAppend[]) {
+    (Array.isArray(appends) ? appends : [appends]).forEach((a) => this.runtimeAppends.add(a));
     return this;
   }
 
-  withAllAppends(): this {
-    return this.withAppends(Object.keys(this.appendMap()));
-  }
-
-  withAllHydrators(): this {
-    this.hydrators.forEach((_, key) => this.activeHydrators.add(key));
+  withHydrators(hydrators: THydrator | THydrator[]) {
+    (Array.isArray(hydrators) ? hydrators : [hydrators]).forEach((h) => this.runtimeHydrators.add(h));
     return this;
   }
 
-  beforeExecute(callback: (args: Record<string, unknown>) => void | Promise<void>): this {
-    this.beforeExecuteCallbacks.push(callback);
+  withAllAppends() {
+    Object.keys(this.appendMap()).forEach((a) => this.withAppends(a as TAppend));
     return this;
   }
 
-  protected resolveAppends(appendHandlers: Record<string, () => void>, filters: CoreQueryFilter[], sortBy?: string) {
-    const fields = new Set<string>(this.requestedAppends);
-
-    for (const filter of filters) {
-      fields.add(filter.field);
-    }
-    if (sortBy) {
-      fields.add(sortBy);
-    }
-
-    this.resolvedAppendFields.clear();
-
-    for (const field of fields) {
-      this.resolvedAppendFields.add(field);
-      appendHandlers[field]?.();
-    }
+  withAllHydrators() {
+    Object.keys(this.hydratorMap()).forEach((h) => this.withHydrators(h as THydrator));
+    return this;
   }
 
-  protected applyFilters(
-    where: Record<string, unknown>,
-    filters: CoreQueryFilter[],
-    filterHandlers: Record<string, (where: Record<string, unknown>, filter: CoreQueryFilter) => void>,
-  ) {
-    for (const filter of filters) {
-      const handler = filterHandlers[filter.field];
-      if (handler) {
-        handler(where, filter);
+  withAll() {
+    this.withAllAppends();
+    this.withAllHydrators();
+    return this;
+  }
+
+  // ===== INTERNAL =====
+
+  protected getRequestedAppends(): string[] {
+    const fromParams = Array.isArray(this.params?.appends)
+      ? this.params.appends
+      : this.params?.appends
+        ? [this.params.appends]
+        : [];
+
+    return Array.from(new Set([...fromParams, ...this.runtimeAppends]));
+  }
+
+  protected getRequestedHydrators(): string[] {
+    const fromParams = Array.isArray(this.params?.hydrators)
+      ? this.params.hydrators
+      : this.params?.hydrators
+        ? [this.params.hydrators]
+        : [];
+
+    return Array.from(new Set([...fromParams, ...this.runtimeHydrators]));
+  }
+
+  // ===== APPLY =====
+
+  protected applySelect() {
+    this.select ??= {};
+    Object.assign(this.select, this.baseSelect() ?? {});
+  }
+
+  protected applyWhere() {
+    const dynamicWhere: any = {};
+    const filters = this.params?.filters ?? {};
+    const map = this.filterMap();
+
+    for (const field in filters) {
+      const { value, matchMode } = filters[field];
+
+      if (map[field]) {
+        Object.assign(dynamicWhere, map[field](value, matchMode, this.params));
         continue;
       }
 
-      this.applyDefaultFilter(where, filter);
+      Object.assign(dynamicWhere, normalizeQueryFilters({ [field]: filters[field] }));
     }
-  }
 
-  protected applyStringFilter(where: Record<string, unknown>, field: string, filter: CoreQueryFilter) {
-    const value = this.toFilterString(filter.value);
-    if (!value) return;
-
-    switch (filter.matchMode) {
-      case 'eq':
-      case 'equals':
-        where[field] = value;
-        return;
-      case 'startsWith':
-        where[field] = { startsWith: value };
-        return;
-      case 'endsWith':
-        where[field] = { endsWith: value };
-        return;
-      case 'in':
-        where[field] = {
-          in: value
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean),
-        };
-        return;
-      case 'isNull':
-        where[field] = filter.value ? null : { not: null };
-        return;
-      case 'like':
-      default:
-        where[field] = { contains: value };
-        return;
-    }
-  }
-
-  protected applyRelationStringFilter(
-    where: Record<string, unknown>,
-    relation: string,
-    relationField: string,
-    filter: CoreQueryFilter,
-    relationOperator: 'is' | 'some' | 'every' | 'none' = 'is',
-  ) {
-    const relationWhere: Record<string, unknown> = {};
-    this.applyStringFilter(relationWhere, relationField, filter);
-
-    if (Object.keys(relationWhere).length === 0) return;
-
-    where[relation] = {
-      [relationOperator]: relationWhere,
+    this.where = {
+      ...this.baseWhere(),
+      ...dynamicWhere,
+      ...this.where,
     };
   }
 
-  protected toFilterString(value: unknown): string | null {
-    if (typeof value === 'string') {
-      const normalized = value.trim();
-      return normalized.length > 0 ? normalized : null;
-    }
+  protected applyOrderBy() {
+    const sortBy = this.params?.sortBy;
+    const direction = this.params?.sortOrder ?? 'asc';
 
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-      return value.toString();
-    }
-
-    return null;
-  }
-
-  protected toBoolean(value: unknown): boolean | null {
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'number') return value === 1 ? true : value === 0 ? false : null;
-    if (typeof value !== 'string') return null;
-
-    const normalized = value.trim().toLowerCase();
-    if (['1', 'true', 'yes', 'sim'].includes(normalized)) return true;
-    if (['0', 'false', 'no', 'nao'].includes(normalized)) return false;
-
-    return null;
-  }
-
-  protected toBigInt(value: unknown): bigint | null {
-    if (typeof value === 'bigint') return value;
-    if (typeof value === 'number' && Number.isFinite(value)) return BigInt(Math.trunc(value));
-    if (typeof value !== 'string') return null;
-
-    const normalized = value.trim();
-    if (!normalized) return null;
-
-    try {
-      return BigInt(normalized);
-    } catch {
-      return null;
-    }
-  }
-
-  protected applySort(
-    orderBy: Record<string, unknown>,
-    sortHandlers: Record<string, (orderBy: Record<string, unknown>, direction: SortDirection) => void>,
-    sort: { field?: string; direction: SortDirection },
-  ) {
-    const sortBy = sort.field;
-    const sortOrder = sort.direction;
-    if (!sortBy) return;
-
-    const handler = sortHandlers[sortBy];
-    if (handler) {
-      handler(orderBy, sortOrder);
+    if (!sortBy) {
+      this.orderBy = this.baseOrderBy();
       return;
     }
 
-    orderBy[sortBy] = sortOrder;
+    const map = this.sortMap();
+
+    if (map[sortBy]) {
+      this.orderBy = map[sortBy](direction);
+      return;
+    }
+
+    this.orderBy = normalizeQueryOrderBy<TOrderBy>(sortBy, direction);
   }
 
-  protected async applyHydrators(items: T[]) {
-    if (!items.length) return;
+  protected applyAppends() {
+    const appends = this.getRequestedAppends();
+    if (!appends.length) return;
 
-    for (const key of this.activeHydrators) {
-      const hydrate = this.hydrators.get(key);
-      if (hydrate) {
-        await hydrate(items);
+    this.select ??= {} as any;
+
+    for (const key of appends) {
+      const handler = this.appendMap()[key];
+      if (!handler?.select) continue;
+
+      Object.assign(this.select, handler.select());
+    }
+  }
+
+  protected async applyHydrators(rows: any[]) {
+    for (const key of this.getRequestedHydrators()) {
+      const hydrator = this.hydratorMap()[key];
+      if (hydrator) {
+        await hydrator.hydrate(rows, this.prisma);
       }
     }
   }
 
-  protected registerHydrator(key: string, callback: (items: T[]) => void | Promise<void>) {
-    this.hydrators.set(key, callback);
-  }
+  protected transformPayload(rows: any[]) {
+    const appends = this.getRequestedAppends();
+    if (!appends.length) return rows;
 
-  protected registerAppendMapper(key: string, callback: (items: T[]) => void | Promise<void>) {
-    this.appendMappers.set(key, callback);
-  }
+    return rows.map((row) => {
+      for (const key of appends) {
+        const handler = this.appendMap()[key];
+        if (!handler) continue;
 
-  protected requestHydrator(key: string) {
-    if (this.hydrators.has(key)) {
-      this.activeHydrators.add(key);
-    }
-  }
+        if (handler.resolve) {
+          Object.assign(row, handler.resolve(row));
+        }
 
-  protected setDefaultSort(field: string, direction: SortDirection = 'asc') {
-    this.defaultSort = { field, direction };
-  }
-
-  protected addInclude(include: Record<string, unknown>) {
-    this.mergeObject(this.requestedIncludes, include);
-  }
-
-  protected registerJoin(key: string, callback: () => void) {
-    if (!this.joinRegistry.has(key)) {
-      this.joinRegistry.set(key, {
-        state: CoreQuery.JOIN_NONE,
-        callback,
-      });
-    }
-  }
-
-  protected requestJoin(key: string) {
-    const join = this.joinRegistry.get(key);
-    if (!join) return;
-
-    if (join.state === CoreQuery.JOIN_NONE) {
-      join.state = CoreQuery.JOIN_REQUESTED;
-    }
-  }
-
-  async get(): Promise<CoreQueryListResult<T>> {
-    const filters = this.normalizeFilters();
-    const appendHandlers = this.appendMap();
-    const filterHandlers = this.filterMap();
-    const sortHandlers = this.sortMap();
-    const sort = this.resolveSort();
-
-    this.resolveAppends(appendHandlers, filters, sort.field);
-    this.applyJoins();
-
-    const where: Record<string, unknown> = {
-      ...this.baseWhere(),
-      ...((this.params.where as Record<string, unknown> | undefined) ?? {}),
-    };
-    const orderBy: Record<string, unknown> = {};
-
-    this.applyFilters(where, filters, filterHandlers);
-    this.applySort(orderBy, sortHandlers, sort);
-
-    const select = this.baseSelect();
-    const include = this.resolveInclude();
-
-    const skip = this.parseSkip();
-    const take = this.parseTake();
-
-    const args: Record<string, unknown> = {
-      where,
-      skip,
-      take,
-    };
-
-    if (Object.keys(orderBy).length > 0) {
-      args.orderBy = orderBy;
-    }
-    if (select && include) {
-      args.select = this.mergeSelectWithInclude(select, include);
-    } else if (select) {
-      args.select = select;
-    } else if (include) {
-      args.include = include;
-    }
-    for (const callback of this.beforeExecuteCallbacks) {
-      await callback(args);
-    }
-
-    const [data, total] = await Promise.all([this.model().findMany(args), this.model().count({ where })]);
-
-    await this.applyHydrators(data);
-    await this.applyAppendMappers(data);
-
-    return {
-      data,
-      total,
-      skip,
-      take,
-      totalPages: take > 0 ? Math.ceil(total / take) : 0,
-    };
-  }
-
-  private parseSkip(): number {
-    const value = Number(this.params.skip);
-    if (!Number.isFinite(value) || value < 0) return 0;
-    return Math.trunc(value);
-  }
-
-  private parseTake(): number {
-    const value = Number(this.params.take);
-    if (!Number.isFinite(value) || value <= 0) return 10;
-    return Math.trunc(value);
-  }
-
-  private parseAppends(appends: CoreQueryParams['appends']): string[] {
-    if (!appends) return [];
-
-    if (Array.isArray(appends)) {
-      return appends
-        .flatMap((append) => this.toAppendString(append).split(','))
-        .map((append) => append.trim())
-        .filter(Boolean);
-    }
-
-    return this.toAppendString(appends)
-      .split(',')
-      .map((append) => append.trim())
-      .filter(Boolean);
-  }
-
-  private parseHydrators(hydrators: CoreQueryParams['hydrators']): string[] {
-    if (!hydrators) return [];
-
-    if (Array.isArray(hydrators)) {
-      return hydrators
-        .flatMap((hydrator) => this.toAppendString(hydrator).split(','))
-        .map((hydrator) => hydrator.trim())
-        .filter(Boolean);
-    }
-
-    return this.toAppendString(hydrators)
-      .split(',')
-      .map((hydrator) => hydrator.trim())
-      .filter(Boolean);
-  }
-
-  private normalizeFilters(): CoreQueryFilter[] {
-    const filters = this.params.filters;
-    if (!filters) return [];
-
-    return Object.entries(filters).map(([field, filterConfig]) => {
-      if (typeof filterConfig === 'object' && filterConfig !== null && 'value' in filterConfig) {
-        const typedFilter = filterConfig as { value: unknown; matchMode?: MatchMode };
-
-        return {
-          field,
-          value: typedFilter.value,
-          matchMode: typedFilter.matchMode ?? this.inferMatchMode(typedFilter.value),
-        };
+        handler.cleanup?.forEach((field) => {
+          delete row[field];
+        });
       }
 
-      return {
-        field,
-        value: filterConfig,
-        matchMode: this.inferMatchMode(filterConfig),
-      };
+      return row;
     });
   }
 
-  private applyDefaultFilter(where: Record<string, unknown>, filter: CoreQueryFilter) {
-    const field = filter.field;
-    const value = filter.value;
+  // ===== EXECUTION =====
 
-    switch (filter.matchMode) {
-      case 'equals':
-      case 'eq':
-        where[field] = value;
-        break;
-      case 'startsWith':
-        {
-          const parsed = this.toFilterString(value);
-          if (!parsed) return;
-          where[field] = { startsWith: parsed };
-        }
-        break;
-      case 'endsWith':
-        {
-          const parsed = this.toFilterString(value);
-          if (!parsed) return;
-          where[field] = { endsWith: parsed };
-        }
-        break;
-      case 'in':
-        {
-          const parsed = this.toArrayValue(value);
-          if (parsed.length === 0) return;
-          where[field] = { in: parsed };
-        }
-        break;
-      case 'isNull':
-        where[field] = value ? null : { not: null };
-        break;
-      case 'like':
-      default:
-        {
-          const parsed = this.toFilterString(value);
-          if (!parsed) return;
-          where[field] = { contains: parsed };
-        }
-        break;
-    }
+  async get() {
+    this.applySelect();
+    this.applyAppends();
+    this.applyWhere();
+    this.applyOrderBy();
+
+    const rows = await (this.model as any).findMany({
+      select: this.select,
+      where: this.where,
+      orderBy: this.orderBy,
+    });
+
+    await this.applyHydrators(rows);
+    return this.transformPayload(rows);
   }
 
-  private toAppendString(value: unknown): string {
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-      return value.toString();
-    }
-    return '';
-  }
+  // ===== AUX =====
 
-  private toArrayValue(value: unknown): unknown[] {
-    if (Array.isArray(value)) {
-      return value.filter((item) => item !== null && item !== undefined);
-    }
+  protected async hydrateHasMany<
+    TParent extends { id: bigint | number },
+    TChild extends Record<string, any>,
+    TForeignKey extends keyof TChild,
+  >(
+    rows: TParent[],
+    delegate: {
+      findMany(args: any): Promise<TChild[]>;
+    },
+    foreignKey: TForeignKey, // FK NO FILHO
+    attributeName: string, // onde hidratar no pai
+    select: Record<string, boolean>,
+    extraWhere?: Record<string, any>,
+  ): Promise<void> {
+    if (!rows.length) return;
 
-    if (typeof value === 'string') {
-      return value
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
+    const ids = rows.map((r) => BigInt(r.id));
 
-    if (value === null || value === undefined) return [];
-    return [value];
-  }
+    const children = await delegate.findMany({
+      where: {
+        [foreignKey]: { in: ids },
+        ...extraWhere,
+      },
+      select,
+    });
 
-  private inferMatchMode(value: unknown): MatchMode {
-    return typeof value === 'string' ? 'like' : 'eq';
-  }
+    const map = new Map<string, TChild[]>();
 
-  private resolveInclude(): Record<string, unknown> | undefined {
-    const resolved: Record<string, unknown> = {};
+    for (const child of children) {
+      const key = String(child[foreignKey] as bigint);
 
-    const baseInclude = this.baseInclude();
-    if (baseInclude) {
-      this.mergeObject(resolved, baseInclude);
-    }
-
-    this.mergeObject(resolved, this.requestedIncludes);
-
-    return Object.keys(resolved).length > 0 ? resolved : undefined;
-  }
-
-  private mergeSelectWithInclude(
-    select: Record<string, unknown>,
-    include: Record<string, unknown>,
-  ): Record<string, unknown> {
-    const merged: Record<string, unknown> = {};
-    this.mergeObject(merged, select);
-    this.mergeObject(merged, include);
-    return merged;
-  }
-
-  private mergeObject(target: Record<string, unknown>, source: Record<string, unknown>) {
-    for (const [key, value] of Object.entries(source)) {
-      if (this.isPlainObject(value)) {
-        const current = target[key];
-
-        if (this.isPlainObject(current)) {
-          this.mergeObject(current, value);
-        } else {
-          const nested: Record<string, unknown> = {};
-          this.mergeObject(nested, value);
-          target[key] = nested;
-        }
-
-        continue;
+      if (!map.has(key)) {
+        map.set(key, []);
       }
 
-      target[key] = value;
-    }
-  }
-
-  private isPlainObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-  }
-
-  private resolveSort(): { field?: string; direction: SortDirection } {
-    if (this.params.sortBy) {
-      return {
-        field: this.params.sortBy,
-        direction: this.params.sortOrder ?? 'asc',
-      };
+      map.get(key)!.push(child);
     }
 
-    if (this.defaultSort) {
-      return this.defaultSort;
-    }
-
-    return {
-      field: undefined,
-      direction: 'asc',
-    };
-  }
-
-  private async applyAppendMappers(items: T[]) {
-    if (!items.length) return;
-
-    for (const append of this.resolvedAppendFields) {
-      const mapper = this.appendMappers.get(append);
-      if (mapper) {
-        await mapper(items);
-        continue;
-      }
-
-      this.applyDefaultAppendMapper(items, append);
-    }
-  }
-
-  private applyDefaultAppendMapper(items: T[], append: string) {
-    if (!append.startsWith('ds_')) return;
-
-    const relation = append.slice(3);
-    if (!relation) return;
-
-    for (const item of items as Array<Record<string, unknown>>) {
-      const relationData = item[relation];
-      if (!this.isPlainObject(relationData) || !('name' in relationData)) continue;
-
-      item[append] = relationData.name ?? null;
-
-      const keepRelation = this.requestedAppends.has(relation) || this.activeHydrators.has(relation);
-      if (!keepRelation) {
-        delete item[relation];
-      }
-    }
-  }
-
-  private applyJoins() {
-    let hasPending = true;
-
-    while (hasPending) {
-      hasPending = false;
-
-      for (const [, join] of this.joinRegistry) {
-        if (join.state === CoreQuery.JOIN_REQUESTED) {
-          join.callback();
-          join.state = CoreQuery.JOIN_APPLIED;
-          hasPending = true;
-        }
-      }
+    for (const row of rows) {
+      const key = String(row.id);
+      (row as Record<string, any>)[attributeName] = map.get(key) ?? [];
     }
   }
 }

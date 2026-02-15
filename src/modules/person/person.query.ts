@@ -1,93 +1,126 @@
-import { Person } from 'prisma/generated/client';
-import { CoreQuery, CoreQueryFilter, CoreQueryParams } from 'src/core/support/core-query.support';
+import { Prisma } from 'prisma/generated/client';
+import { CoreQuery } from 'src/core/support/core-query.support';
+import {
+  CoreQueryAppendHandler,
+  CoreQueryFilterHandler,
+  CoreQueryHydratorHandler,
+  CoreQuerySortHandler,
+} from 'src/core/types/core-query.type';
+import { QueryParamsType } from 'src/core/types/query.type';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-type PersonSortDirection = 'asc' | 'desc';
+export type PersonAppends = 'ds_company';
+export type PersonHydrators = 'personPhone';
 
-export class PersonQuery extends CoreQuery<Person> {
-  private static readonly KEY_JOIN_COMPANY = 'company';
-  private static readonly APPEND_COMPANY = 'company';
-  private static readonly APPEND_DS_COMPANY = 'ds_company';
-  private static readonly HYDRATOR_COMPANY = 'company';
-
-  constructor(prisma: PrismaService, params: CoreQueryParams) {
-    super(prisma, params);
-
-    this.registerJoin(PersonQuery.KEY_JOIN_COMPANY, () => this.joinCompany());
-    this.registerHydrator(PersonQuery.HYDRATOR_COMPANY, this.hydrateCompany.bind(this));
-    this.setDefaultSort('name', 'asc');
+export class PersonQuery extends CoreQuery<
+  Prisma.PersonDelegate,
+  Prisma.PersonSelect,
+  Prisma.PersonWhereInput,
+  Prisma.PersonOrderByWithRelationInput,
+  Prisma.PersonInclude,
+  PersonAppends,
+  PersonHydrators
+> {
+  private constructor(
+    prisma: PrismaService,
+    protected readonly params: QueryParamsType<Prisma.PersonWhereInput>,
+  ) {
+    super(prisma, params, prisma.person);
   }
 
-  protected model() {
-    return this.prisma.person;
+  static init(prisma: PrismaService, params: QueryParamsType<Prisma.PersonWhereInput>) {
+    return new PersonQuery(prisma, params);
   }
 
-  protected baseWhere() {
-    return {};
-  }
+  // ===== BASE =====
 
-  protected appendMap() {
+  protected baseSelect(): Prisma.PersonSelect {
     return {
-      [PersonQuery.APPEND_COMPANY]: () => {
-        this.requestHydrator(PersonQuery.HYDRATOR_COMPANY);
-      },
-      [PersonQuery.APPEND_DS_COMPANY]: () => {
-        this.requestJoin(PersonQuery.KEY_JOIN_COMPANY);
+      id: true,
+      name: true,
+      ds_document: true,
+      ds_email: true,
+      ds_phone: true,
+      da_birth: true,
+      tp_gender: true,
+      ds_address_street: true,
+      ds_address_number: true,
+      ds_address_complement: true,
+      ds_address_district: true,
+      ds_address_city: true,
+      ds_address_state: true,
+      ds_address_zipcode: true,
+      fl_active: true,
+    };
+  }
+
+  protected baseWhere(): Prisma.PersonWhereInput {
+    return {
+      // name: 'test',
+    };
+  }
+
+  protected baseOrderBy(): Prisma.PersonOrderByWithRelationInput {
+    return {
+      name: 'asc',
+    };
+  }
+
+  // ===== MAPS =====
+
+  protected appendMap(): Record<PersonAppends, CoreQueryAppendHandler<Prisma.PersonSelect>> {
+    return {
+      ds_company: {
+        select: () => ({
+          company: {
+            select: { name: true },
+          },
+        }),
+        resolve: (row: any) => ({
+          ds_company: row.company?.name ?? null,
+        }),
+        cleanup: ['company'],
       },
     };
   }
 
-  protected filterMap() {
+  protected filterMap(): Record<string, CoreQueryFilterHandler<Prisma.PersonWhereInput>> {
     return {
-      ds_company: (where: Record<string, unknown>, filter: CoreQueryFilter) => {
-        this.applyRelationStringFilter(where, 'company', 'name', filter, 'is');
-      },
+      ds_company: (value) => ({
+        company: {
+          name: { contains: value },
+        },
+      }),
     };
   }
 
-  protected sortMap() {
+  protected sortMap(): Record<string, CoreQuerySortHandler<Prisma.PersonOrderByWithRelationInput>> {
     return {
-      ds_company: (orderBy: Record<string, unknown>, direction: PersonSortDirection) => {
-        orderBy.company = { name: direction };
-      },
+      ds_company: (direction) => ({
+        company: {
+          name: direction,
+        },
+      }),
     };
   }
 
-  private joinCompany() {
-    this.addInclude({
-      company: {
-        select: {
-          name: true,
+  protected hydratorMap(): Record<PersonHydrators, CoreQueryHydratorHandler> {
+    return {
+      personPhone: {
+        hydrate: async (rows: Array<{ id: bigint | number } & Record<string, any>>, prisma: PrismaService) => {
+          await this.hydrateHasMany(rows, prisma.personPhone, 'person_id', 'person_phone', {
+            id: true,
+            person_id: true,
+            ds_phone: true,
+          });
         },
       },
-    });
+    };
   }
 
-  private async hydrateCompany(items: Person[]) {
-    if (!items.length) return;
+  // ===== FLUENT =====
 
-    const companyIds = Array.from(new Set(items.map((item) => item.company_id)));
-
-    const companies = await this.prisma.company.findMany({
-      where: {
-        id: {
-          in: companyIds,
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        tp_company: true,
-        ds_email: true,
-        ds_phone: true,
-        ds_address: true,
-      },
-    });
-
-    const companyById = new Map(companies.map((company) => [company.id.toString(), company] as const));
-
-    for (const item of items as Array<Person & { company?: (typeof companies)[number] | null }>) {
-      item.company = companyById.get(item.company_id.toString()) ?? null;
-    }
+  withPersonPhone() {
+    return this.withHydrators('personPhone');
   }
 }

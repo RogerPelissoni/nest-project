@@ -12,3 +12,9 @@
   - docker compose exec backend npx prisma migrate dev --name init
 - Seed the database
   - docker compose exec backend pnpm prisma:seed
+
+# Add New Migration
+
+- docker compose exec backend npx prisma migrate dev --name <migration_name>
+- docker compose exec backend npx prisma generate
+- docker compose exec backend npx prisma validate

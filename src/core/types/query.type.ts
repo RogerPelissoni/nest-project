@@ -1,7 +1,24 @@
+type MatchModeType =
+  | 'eq'
+  | 'equals'
+  | 'neq'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'between'
+  | 'like'
+  | 'startsWith'
+  | 'endsWith'
+  | 'in'
+  | 'notIn'
+  | 'isNull'
+  | 'isNotNull';
+
 export type QueryFilter = {
   field: string;
   value: any;
-  matchMode?: 'eq' | 'like' | 'in' | 'isNull';
+  matchMode?: MatchModeType;
   operator?: 'and' | 'or';
 };
 
@@ -17,3 +34,22 @@ export interface QueryParams {
   perPage?: number;
   appends?: string[];
 }
+
+export type QueryParamsType<TWhere> = {
+  skip?: number;
+  take?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  where?: TWhere;
+  appends?: string[] | string;
+  hydrators?: string[] | string;
+  filters?: QueryFilters;
+};
+
+export type QueryFilters = Record<
+  string,
+  {
+    value: any;
+    matchMode?: MatchModeType;
+  }
+>;

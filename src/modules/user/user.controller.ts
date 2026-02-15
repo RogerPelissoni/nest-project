@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { UserService } from './user.service';
+import { Prisma } from 'prisma/generated/client';
+import { Permission } from 'src/common/decorators/permission.decorator';
+import { CoreController } from 'src/core/core.controller';
+import { QueryParamsType } from 'src/core/types/query.type';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { CoreController } from 'src/core/core.controller';
-import { Permission } from 'src/common/decorators/permission.decorator';
 import { UserScreen } from './user.screen';
-import { QueryParamsType } from 'src/core/types/generic.type';
-import { Prisma } from 'prisma/generated/client';
+import { UserService } from './user.service';
 
 @Controller('user')
 export class UserController extends CoreController<UserService> {

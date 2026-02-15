@@ -1,7 +1,7 @@
 import { Delete, Get, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Permission } from 'src/common/decorators/permission.decorator';
-import { QueryParamsType } from './types/generic.type';
+import { QueryParamsType } from './types/query.type';
 
 type QueryLike = {
   skip?: unknown;
@@ -73,13 +73,7 @@ export class CoreController<TService> {
     example: '{"name":{"value":"john","matchMode":"like"}}',
   })
   findAll(@Query() query: QueryLike) {
-    return (this.service as any).findAll({
-      ...this.parsePagination(query),
-      ...this.parseSorting(query),
-      appends: this.parseAppends(query),
-      hydrators: this.parseHydrators(query),
-      filters: this.parseFilters(query),
-    });
+    return (this.service as any).findAll(this.parseQuery(query));
   }
 
   @Get(':id')
@@ -165,7 +159,7 @@ export class CoreController<TService> {
       .filter(Boolean);
   }
 
-  protected parseQuery<TWhereInput>(queryParams: QueryParamsType<TWhereInput>): QueryParamsType<TWhereInput> {
+  protected parseQuery<TWhereInput>(queryParams: QueryLike): QueryParamsType<TWhereInput> {
     return {
       ...this.parsePagination(queryParams),
       ...this.parseSorting(queryParams),

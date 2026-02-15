@@ -46,6 +46,9 @@ model User {
   createdPersons Person[] @relation("PersonCreatedBy")
   updatedPersons Person[] @relation("PersonUpdatedBy")
 
+  createdPersonsPhone PersonPhone[] @relation("PersonPhoneCreatedBy")
+  updatedPersonsPhone PersonPhone[] @relation("PersonPhoneUpdatedBy")
+
   @@map("user")
 }
 
@@ -128,6 +131,7 @@ model Company {
   profiles          Profile[]
   profilePermission ProfilePermission[]
   person            Person[]
+  personPhone       PersonPhone[]
 
   @@map("company")
 }
@@ -166,7 +170,30 @@ model Person {
   createdBy User?   @relation("PersonCreatedBy", fields: [created_by], references: [id])
   updatedBy User?   @relation("PersonUpdatedBy", fields: [updated_by], references: [id])
 
-  users User[]
+  users       User[]
+  personPhone PersonPhone[]
 
   @@map("person")
+}
+
+model PersonPhone {
+  id        BigInt @id @default(autoincrement())
+  person_id BigInt
+  ds_phone  String @db.VarChar(50)
+
+  person Person @relation(fields: [person_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
+
+  // Auditable
+  company_id BigInt
+  created_by BigInt?
+  updated_by BigInt?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  // Auditables - Relations
+  company   Company @relation(fields: [company_id], references: [id])
+  createdBy User?   @relation("PersonPhoneCreatedBy", fields: [created_by], references: [id])
+  updatedBy User?   @relation("PersonPhoneUpdatedBy", fields: [updated_by], references: [id])
+
+  @@map("person_phone")
 }
