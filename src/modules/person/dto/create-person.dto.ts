@@ -1,86 +1,56 @@
-import { IsBoolean, IsDateString, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsOptional } from 'class-validator';
 import { PersonGender } from 'prisma/generated/enums';
+import { OptionalDate, OptionalString } from 'src/core/decorators/dto.decorator';
 
 export class CreatePersonDto {
-  // =====================
-  // Dados principais
-  // =====================
+  // ===== Dados principais =====
 
-  @IsNotEmpty()
-  companyId: number;
-
-  @IsString()
-  @IsNotEmpty()
-  @Length(1, 150)
+  @OptionalString({ minLength: 1, maxLength: 150 })
   name: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(1, 20)
+  @OptionalString({ maxLength: 20 })
   ds_document?: string;
 
-  @IsOptional()
+  @OptionalString({ maxLength: 100 })
   @IsEmail()
-  @Length(1, 100)
   ds_email?: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(1, 20)
+  @OptionalString({ maxLength: 20 })
   ds_phone?: string;
 
-  @IsOptional()
-  @IsDateString()
-  da_birth?: string;
+  @OptionalDate()
+  da_birth?: Date;
 
-  @IsOptional()
   @IsEnum(PersonGender)
+  @IsOptional()
   tp_gender?: PersonGender;
 
-  // =====================
-  // Endereço
-  // =====================
+  // ===== Endereço =====
 
-  @IsOptional()
-  @IsString()
-  @Length(1, 120)
+  @OptionalString({ maxLength: 120 })
   ds_address_street?: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(1, 20)
+  @OptionalString({ maxLength: 20 })
   ds_address_number?: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(1, 60)
+  @OptionalString({ maxLength: 60 })
   ds_address_complement?: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(1, 80)
+  @OptionalString({ maxLength: 80 })
   ds_address_district?: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(1, 80)
+  @OptionalString({ maxLength: 80 })
   ds_address_city?: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(2, 2)
+  @OptionalString({ minLength: 2, maxLength: 2 })
   ds_address_state?: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(1, 10)
+  @OptionalString({ maxLength: 10 })
   ds_address_zipcode?: string;
 
-  // =====================
-  // Flags
-  // =====================
+  // ===== Flags =====
 
-  @IsOptional()
   @IsBoolean()
+  @IsOptional()
   fl_active?: boolean;
 }

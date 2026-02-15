@@ -205,11 +205,15 @@ export abstract class CoreQuery<
 
   // ===== EXECUTION =====
 
-  async get() {
+  execute() {
     this.applySelect();
     this.applyAppends();
     this.applyWhere();
     this.applyOrderBy();
+  }
+
+  async get() {
+    this.execute();
 
     const rows = await (this.model as any).findMany({
       select: this.select,
@@ -219,6 +223,33 @@ export abstract class CoreQuery<
 
     await this.applyHydrators(rows);
     return this.transformPayload(rows);
+  }
+
+  async paginate(skip = 0, take = 10) {
+    this.execute();
+
+    const total = await (this.model as any).count({
+      where: this.where,
+    });
+
+    const rows = await (this.model as any).findMany({
+      select: this.select,
+      where: this.where,
+      orderBy: this.orderBy,
+      skip,
+      take,
+    });
+
+    await this.applyHydrators(rows);
+    const transformed = this.transformPayload(rows);
+
+    return {
+      data: transformed,
+      total,
+      skip,
+      take,
+      totalPages: Math.ceil(total / take),
+    };
   }
 
   // ===== AUX =====
