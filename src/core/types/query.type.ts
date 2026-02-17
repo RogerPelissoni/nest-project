@@ -41,6 +41,7 @@ export type QueryParamsType<TWhere> = {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   where?: TWhere;
+  fields?: string[] | string;
   appends?: string[] | string;
   hydrators?: string[] | string;
   filters?: QueryFilters;

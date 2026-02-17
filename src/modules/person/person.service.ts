@@ -18,6 +18,6 @@ export class PersonService extends CoreService<
   }
 
   findAll(params: QueryParamsType<Prisma.PersonWhereInput>): any {
-    return PersonQuery.init(this.prisma, params).withAll().paginate();
+    return PersonQuery.init(this.prisma, params).paginate();
   }
 }

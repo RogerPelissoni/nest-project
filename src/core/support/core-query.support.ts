@@ -17,7 +17,7 @@ export abstract class CoreQuery<
   TAppend extends string = string,
   THydrator extends string = string,
 > {
-  protected select: Partial<TSelect> = {};
+  protected select: Partial<Record<keyof TSelect, any>> = {};
   protected where: TWhere = {} as TWhere;
   protected orderBy?: TOrderBy;
   protected include?: Partial<TInclude>;
@@ -113,6 +113,19 @@ export abstract class CoreQuery<
 
   protected applySelect() {
     this.select ??= {};
+
+    if (this.params.fields?.length) {
+      const obRequestFields: Partial<Record<keyof TSelect, any>> = {};
+      Object.assign(obRequestFields, { id: true });
+
+      for (const nmField of this.params.fields) {
+        obRequestFields[nmField as keyof TSelect] = true;
+      }
+
+      this.select = obRequestFields;
+      return;
+    }
+
     Object.assign(this.select, this.baseSelect() ?? {});
   }
 

@@ -9,6 +9,7 @@ type QueryLike = {
   sortBy?: unknown;
   sortOrder?: unknown;
   filters?: unknown;
+  fields?: unknown;
   appends?: unknown;
   hydrators?: unknown;
 };
@@ -51,6 +52,13 @@ export class CoreController<TService> {
     example: 'asc',
   })
   @ApiQuery({
+    name: 'fields',
+    required: false,
+    type: String,
+    description: 'Campos requisitados na query, ex: name,ds_company',
+    example: 'name',
+  })
+  @ApiQuery({
     name: 'appends',
     required: false,
     type: String,
@@ -69,8 +77,8 @@ export class CoreController<TService> {
     required: false,
     type: String,
     description:
-      'JSON de filtros. Ex: {"name":{"value":"john","matchMode":"like"},"fl_active":{"value":true,"matchMode":"eq"}}',
-    example: '{"name":{"value":"john","matchMode":"like"}}',
+      'JSON de filtros. Ex: {"name":{"value":"test","matchMode":"like"},"fl_active":{"value":true,"matchMode":"eq"}}',
+    example: '{"name":{"value":"test","matchMode":"like"}}',
   })
   findAll(@Query() query: QueryLike) {
     return (this.service as any).findAll(this.parseQuery(query));
@@ -86,6 +94,17 @@ export class CoreController<TService> {
   @Permission('delete')
   remove(@Param('id') id: string) {
     return (this.service as any).remove(Number(id));
+  }
+
+  protected parseQuery<TWhereInput>(query: QueryLike): QueryParamsType<TWhereInput> {
+    return {
+      ...this.parsePagination(query),
+      ...this.parseSorting(query),
+      fields: this.parseDelimitedList(query.fields),
+      appends: this.parseDelimitedList(query.appends),
+      hydrators: this.parseDelimitedList(query.hydrators),
+      filters: this.parseFilters(query),
+    };
   }
 
   protected parsePagination(query: QueryLike): Pick<QueryParamsType<unknown>, 'skip' | 'take'> {
@@ -125,48 +144,29 @@ export class CoreController<TService> {
     }
   }
 
-  protected parseAppends(query: QueryLike): string[] {
-    const rawAppends = query.appends;
-    if (!rawAppends) return [];
+  // ===== AUX =====
 
-    if (Array.isArray(rawAppends)) {
-      return rawAppends
-        .flatMap((append: unknown) => this.toAppendChunks(append).split(','))
-        .map((append: string) => append.trim())
-        .filter(Boolean);
-    }
+  protected parseDelimitedList(value: unknown): string[] {
+    if (!value) return [];
 
-    return this.toAppendChunks(rawAppends)
-      .split(',')
-      .map((append) => append.trim())
+    const chunks = Array.isArray(value) ? value.map((v) => this.toStringSafe(v)) : [this.toStringSafe(value)];
+
+    return chunks
+      .flatMap((v) => v.split(','))
+      .map((v) => v.trim())
       .filter(Boolean);
   }
 
-  protected parseHydrators(query: QueryLike): string[] {
-    const rawHydrators = query.hydrators;
-    if (!rawHydrators) return [];
-
-    if (Array.isArray(rawHydrators)) {
-      return rawHydrators
-        .flatMap((hydrator: unknown) => this.toAppendChunks(hydrator).split(','))
-        .map((hydrator: string) => hydrator.trim())
-        .filter(Boolean);
+  private toStringSafe(value: unknown): string {
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      typeof value === 'bigint'
+    ) {
+      return value.toString();
     }
-
-    return this.toAppendChunks(rawHydrators)
-      .split(',')
-      .map((hydrator) => hydrator.trim())
-      .filter(Boolean);
-  }
-
-  protected parseQuery<TWhereInput>(queryParams: QueryLike): QueryParamsType<TWhereInput> {
-    return {
-      ...this.parsePagination(queryParams),
-      ...this.parseSorting(queryParams),
-      appends: this.parseAppends(queryParams),
-      hydrators: this.parseHydrators(queryParams),
-      filters: this.parseFilters(queryParams),
-    };
+    return '';
   }
 
   private toNumberOrDefault(value: unknown, defaultValue: number): number {
@@ -208,13 +208,5 @@ export class CoreController<TService> {
       value === 'in' ||
       value === 'isNull'
     );
-  }
-
-  private toAppendChunks(value: unknown): string {
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-      return value.toString();
-    }
-    return '';
   }
 }
