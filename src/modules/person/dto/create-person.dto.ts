@@ -1,6 +1,8 @@
-import { IsBoolean, IsEmail, IsEnum, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsBoolean, IsEmail, IsEnum, IsOptional, ValidateNested } from 'class-validator';
 import { PersonGender } from 'prisma/generated/enums';
 import { OptionalDate, OptionalString } from 'src/core/decorators/dto.decorator';
+import { OptionalNumericId } from 'src/core/decorators/optional-numeric-id.decorator';
 
 export class CreatePersonDto {
   // ===== Dados principais =====
@@ -53,4 +55,22 @@ export class CreatePersonDto {
   @IsBoolean()
   @IsOptional()
   fl_active?: boolean;
+
+  // ===== PersonPhone =====
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePersonPhoneDto)
+  @IsOptional()
+  personPhone?: CreatePersonPhoneDto[];
+}
+
+export class CreatePersonPhoneDto {
+  @OptionalString({ minLength: 8, maxLength: 20 })
+  ds_phone: string;
+}
+
+export class UpdatePersonPhoneDto extends CreatePersonPhoneDto {
+  @OptionalNumericId()
+  id?: number;
 }

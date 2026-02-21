@@ -35,6 +35,6 @@ export class PersonController extends CoreController<PersonService> {
   @Patch(':id')
   @Permission('update')
   update(@Param('id') id: string, @Body() dto: UpdatePersonDto) {
-    return this.personService.update(Number(id), dto);
+    return this.personService.update(Number(id), DTO.normalize(dto));
   }
 }

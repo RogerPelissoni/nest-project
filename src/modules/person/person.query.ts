@@ -108,7 +108,7 @@ export class PersonQuery extends CoreQuery<
     return {
       personPhone: {
         hydrate: async (rows: Array<{ id: bigint | number } & Record<string, any>>, prisma: PrismaService) => {
-          await this.hydrateHasMany(rows, prisma.personPhone, 'person_id', 'person_phone', {
+          await this.hydrateHasMany(rows, prisma.personPhone, 'person_id', 'personPhone', {
             id: true,
             person_id: true,
             ds_phone: true,
