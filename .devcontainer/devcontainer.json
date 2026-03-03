@@ -1,0 +1,33 @@
+{
+  "name": "Nest Project (newstack-docker)",
+  "dockerComposeFile": [
+    "../../newstack-docker/docker-compose.yml"
+  ],
+  "service": "backend",
+  "runServices": [
+    "db",
+    "backend"
+  ],
+  "workspaceFolder": "/app",
+  "shutdownAction": "stopCompose",
+  "overrideCommand": false,
+  "mounts": [
+    "source=${localEnv:SSH_AUTH_SOCK},target=/ssh-agent,type=bind"
+  ],
+  "remoteEnv": {
+    "SSH_AUTH_SOCK": "/ssh-agent"
+  },
+  "forwardPorts": [
+    8000,
+    3306
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "Prisma.prisma"
+      ]
+    }
+  }
+}
